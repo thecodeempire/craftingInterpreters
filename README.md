@@ -5,7 +5,7 @@
 
 This repo contains the code used while learning how to build an interpreter from the materials in https://craftinginterpreters.com/.
 
-The code-base is in [Rust](https://rust-lang.org), [NodeJS](https://nodejs.ord) and [Haskell](https://haskell.org).
+The code-base is in [Rust](https://rust-lang.org), [NodeJS](https://nodejs.org) and [Haskell](https://haskell.org).
 
 ### Running the code - Rust
 
