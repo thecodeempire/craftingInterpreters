@@ -1,0 +1,6 @@
+{
+  "watch": ["src/*.rs", "Cargo.toml"],
+  "ext": "rs,toml",
+  "ignore": [".git"],
+  "exec": "cls && cargo fmt && cargo test"
+}
