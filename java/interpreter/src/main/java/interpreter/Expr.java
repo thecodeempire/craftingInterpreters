@@ -31,8 +31,8 @@ public abstract class Expr {
   }
 
   static class Grouping extends Expr {
-    Grouping(Expr expressions) {
-      this.expressions = expressions;
+    Grouping(Expr expression) {
+      this.expression = expression;
     }
 
     @Override
@@ -40,7 +40,7 @@ public abstract class Expr {
       return visitor.visitGroupingExpr(this);
     }
 
-    final Expr expressions;
+    final Expr expression;
   }
 
   static class Literal extends Expr {

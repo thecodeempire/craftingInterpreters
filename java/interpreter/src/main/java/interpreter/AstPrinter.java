@@ -12,7 +12,7 @@ public class AstPrinter implements Expr.Visitor<String> {
 
   @Override
   public String visitGroupingExpr(final Expr.Grouping expr) {
-    return parenthesize("group", expr.expressions);
+    return parenthesize("group", expr.expression);
   }
 
   @Override

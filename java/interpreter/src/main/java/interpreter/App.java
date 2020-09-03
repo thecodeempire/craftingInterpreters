@@ -13,6 +13,9 @@ import java.util.List;
 
 public class App {
     static boolean hadError = false;
+    static boolean hadRuntimeError = false;
+
+    private static final Interpreter interpreter = new Interpreter();
 
     public String getGreeting() {
         return "Hello world.";
@@ -53,6 +56,8 @@ public class App {
         run(new String(bytes, Charset.defaultCharset()));
         if (hadError)
             System.exit(65);
+        if (hadRuntimeError)
+            System.exit(70);
     }
 
     private static void run(String source) {
@@ -67,7 +72,14 @@ public class App {
         if (hadError)
             return;
 
-        System.out.println(new AstPrinter().print(expression));
+        interpreter.interpret(expression);
+
+        // System.out.println(new AstPrinter().print(expression));
+    }
+
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
     }
 
     static void error(Token token, String message) {
