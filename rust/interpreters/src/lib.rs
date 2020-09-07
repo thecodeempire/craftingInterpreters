@@ -1,11 +1,16 @@
 pub mod ast_printer;
+pub mod error;
 pub mod expr;
+pub mod interpreter;
 pub mod parser;
 pub mod scanner;
 pub mod token;
+mod typer;
 
+use crate::error::Error;
 use crate::parser::ParseError;
 use core::cell::RefCell;
+use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
 use std::fs::File;
@@ -15,6 +20,7 @@ use std::process;
 
 pub struct Runner {
     pub had_error: RefCell<bool>,
+    pub had_runtime_error: RefCell<bool>,
 }
 
 trait Throw<E> {
@@ -27,14 +33,15 @@ impl<V, E> Throw<E> for Result<V, E> {
     }
 }
 
-impl<'a> Runner {
+impl Runner {
     pub fn new() -> Self {
         Runner {
             had_error: RefCell::new(false),
+            had_runtime_error: RefCell::new(false),
         }
     }
 
-    fn run(&self, source: String) -> Result<(), ParseError> {
+    pub fn run(&self, source: String) -> Result<(), ParseError> {
         let mut scanner = Scanner::new(source, self);
         let tokens = scanner.scan_tokens();
 
@@ -43,11 +50,14 @@ impl<'a> Runner {
         }
 
         let parser = Parser::new(tokens, self);
-        let expr: String = parser.parse()?.print();
+        let expr = parser.parse()?;
         if *self.had_error.borrow() {
             return Err(ParseError::PARSE_ERROR1);
         }
-        println!("{}", expr);
+
+        let expr_str = Interpreter::new(self).interpret(&expr).unwrap();
+        println!("{}", expr_str);
+
         Ok(())
     }
 
@@ -61,6 +71,9 @@ impl<'a> Runner {
 
         if *self.had_error.borrow() {
             process::exit(65);
+        }
+        if *self.had_runtime_error.borrow() {
+            process::exit(70);
         }
 
         Ok(())
@@ -87,6 +100,11 @@ impl<'a> Runner {
                 message,
             ),
         };
+    }
+
+    pub fn runtime_error(&self, error: &Error) {
+        *self.had_runtime_error.borrow_mut() = true;
+        panic!(error.to_string());
     }
 
     fn report(&self, line: usize, which: &str, message: &str) {

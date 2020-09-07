@@ -25,7 +25,7 @@ macro_rules! map(
 );
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: String, runner: &Runner) -> Scanner {
+    pub fn new(source: String, runner: &'a Runner) -> Scanner<'a> {
         let keywords = map! {
             "class" => CLASS,
             "else" => ELSE,
@@ -177,32 +177,34 @@ impl<'a> Scanner<'a> {
     }
 
     fn number(&mut self) {
-        while self.is_digit(self.peek()) {
-            self.advance();
-        }
-
-        if self.peek() == '.' {
-            self.advance();
-
-            while self.is_digit(self.peek()) {
+        if !self.is_at_end() {
+            while !self.is_at_end() && self.is_digit(self.peek()) {
                 self.advance();
             }
 
-            self.current -= 1;
-        } else {
-            self.current -= 1;
-        }
+            if self.peek() == '.' {
+                self.advance();
 
-        if self.is_alpha(self.peek_next()) {
-            self.runner.error(
-                &Token::new(
-                    TokenType::NIL,
-                    &self.peek_next().clone().to_string(),
-                    None,
-                    self.line,
-                ),
-                "Unexpected character check your number!",
-            );
+                while !self.is_at_end() && self.is_digit(self.peek()) {
+                    self.advance();
+                }
+
+                self.current -= 1;
+            } else {
+                self.current -= 1;
+            }
+
+            if self.is_alpha(self.peek_next()) {
+                self.runner.error(
+                    &Token::new(
+                        TokenType::NIL,
+                        &self.peek_next().clone().to_string(),
+                        None,
+                        self.line,
+                    ),
+                    "Unexpected character check your number!",
+                );
+            }
         }
 
         // this is to normalize the advanced current value

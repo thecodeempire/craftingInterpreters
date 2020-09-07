@@ -39,6 +39,7 @@ pub enum TokenType {
     SLASH,
     STAR,
     QUESTION,
+    TERNARY,
 
     // ------ ONE OR TWO CHARACTER TOKENS --------
     BANG,
@@ -85,7 +86,7 @@ impl PartialEq for TokenType {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Literal {
     Number(f64),
     Str(String),
@@ -111,7 +112,7 @@ impl fmt::Display for Literal {
     }
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
@@ -127,6 +128,10 @@ impl Token {
             literal,
             line,
         }
+    }
+
+    pub fn new_ternary(line: usize) -> Self {
+        Token::new(TokenType::TERNARY, "?..:", None, line)
     }
 
     pub fn to_string(&self) -> String {

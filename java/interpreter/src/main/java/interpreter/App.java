@@ -73,7 +73,6 @@ public class App {
             return;
 
         interpreter.interpret(expression);
-
         // System.out.println(new AstPrinter().print(expression));
     }
 

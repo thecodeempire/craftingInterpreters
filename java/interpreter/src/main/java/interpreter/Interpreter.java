@@ -27,6 +27,7 @@ public class Interpreter implements Expr.Visitor<Object> {
       }
       return text;
     }
+
     return object.toString();
   }
 
@@ -99,7 +100,6 @@ public class Interpreter implements Expr.Visitor<Object> {
   }
 
   private Object evaluate(final Expr expression) {
-    // TODO
     return expression.accept(this);
   }
 

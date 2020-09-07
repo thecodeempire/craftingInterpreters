@@ -37,7 +37,7 @@ impl<'a> RPN for Expr<'a> {
                 None => String::from("None"),
             },
             Expr::Unary(operator, right) => parenthesize_rpn!(&operator.lexeme, &right),
-            Expr::Ternary(condition, first, second) => {
+            Expr::Ternary(condition, first, second, _line) => {
                 parenthesize_rpn!("ternary", condition, first, second)
             }
         }

@@ -57,7 +57,12 @@ impl<'a> Parser<'a> {
             let first = self.ternary()?;
             if self.matching(&[COLON]) {
                 let second = self.ternary()?;
-                expr = Expr::Ternary(Box::new(expr), Box::new(first), Box::new(second));
+                expr = Expr::Ternary(
+                    Box::new(expr),
+                    Box::new(first),
+                    Box::new(second),
+                    self.previous(),
+                );
             }
         }
 

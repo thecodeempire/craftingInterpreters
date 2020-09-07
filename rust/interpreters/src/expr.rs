@@ -2,7 +2,7 @@ use crate::token::{Literal, Token};
 
 #[allow(dead_code)]
 pub enum Expr<'a> {
-    Ternary(Box<Expr<'a>>, Box<Expr<'a>>, Box<Expr<'a>>),
+    Ternary(Box<Expr<'a>>, Box<Expr<'a>>, Box<Expr<'a>>, &'a Token),
     Binary(Box<Expr<'a>>, &'a Token, Box<Expr<'a>>),
     Grouping(Box<Expr<'a>>),
     LiteralExpr(Option<&'a Literal>),
@@ -31,7 +31,7 @@ macro_rules! parenthesize {
 impl<'a> Visitor<String> for Expr<'a> {
     fn visit(&self) -> String {
         match self {
-            Expr::Ternary(condition, first, second) => {
+            Expr::Ternary(condition, first, second, _operation) => {
                 parenthesize!("ternary", condition, first, second)
             }
             Expr::Binary(left, operator, right) => parenthesize!(&operator.lexeme, left, right),
@@ -42,12 +42,6 @@ impl<'a> Visitor<String> for Expr<'a> {
                 None => "None".to_string(),
             },
         }
-    }
-}
-
-impl<'a> Visitor<bool> for Expr<'a> {
-    fn visit(&self) -> bool {
-        true
     }
 }
 
@@ -135,6 +129,7 @@ mod tests {
     #[test]
     fn ternary_comma() {
         // EXPRESSION: 1 ? 2 : 0 ? 1 ? 0 : 3: 33
+        let token = &(Token::new(TERNARY, "?..:", None, 33));
         let expr = Ternary(
             bx!(LiteralExpr(Some(&Number(1.0)))),
             bx!(LiteralExpr(Some(&Number(2.0)))),
@@ -143,10 +138,13 @@ mod tests {
                 bx!(Ternary(
                     bx!(LiteralExpr(Some(&Number(1.0)))),
                     bx!(LiteralExpr(Some(&Number(0.0)))),
-                    bx!(LiteralExpr(Some(&Number(3.0))))
+                    bx!(LiteralExpr(Some(&Number(3.0)))),
+                    token,
                 )),
-                bx!(LiteralExpr(Some(&Number(33.0))))
+                bx!(LiteralExpr(Some(&Number(33.0)))),
+                token,
             )),
+            token,
         );
 
         let stringified_expr: String = expr.visit();
