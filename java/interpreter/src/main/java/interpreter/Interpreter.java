@@ -4,14 +4,42 @@ import interpreter.Expr.Binary;
 import interpreter.Expr.Grouping;
 import interpreter.Expr.Literal;
 import interpreter.Expr.Unary;
+import interpreter.Expr.Variable;
 
-public class Interpreter implements Expr.Visitor<Object> {
-  void interpret(Expr expression) {
+import java.util.List;
+
+import interpreter.Stmt;
+import interpreter.Stmt.Block;
+import interpreter.Stmt.Expression;
+import interpreter.Stmt.Print;
+import interpreter.Stmt.Var;
+
+public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+  private Environment environment = new Environment();
+
+  void interpret(List<Stmt> statements) {
     try {
-      Object value = evaluate(expression);
-      System.out.println(stringify(value));
+      for (Stmt statement : statements) {
+        execute(statement);
+      }
     } catch (RuntimeError error) {
       App.runtimeError(error);
+    }
+  }
+
+  private void execute(Stmt stmt) {
+    stmt.accept(this);
+  }
+
+  void executeBlock(List<Stmt> statements, Environment environment) {
+    Environment previous = this.environment;
+    try {
+      this.environment = environment;
+      for (Stmt statement : statements) {
+        execute(statement);
+      }
+    } finally {
+      this.environment = previous;
     }
   }
 
@@ -32,6 +60,14 @@ public class Interpreter implements Expr.Visitor<Object> {
   }
 
   @Override
+  public Object visitAssignExpr(Expr.Assign expr) {
+    Object value = evaluate(expr.value);
+
+    environment.assign(expr.name, value);
+    return value;
+  }
+
+  @Override
   public Object visitBinaryExpr(final Binary expr) {
     final Object left = evaluate(expr.left);
     final Object right = evaluate(expr.right);
@@ -48,6 +84,7 @@ public class Interpreter implements Expr.Visitor<Object> {
 
         throw new RuntimeError(expr.operator, "Operators must be two numbers or two strings");
       }
+
       case MINUS:
         checkNumberOperands(expr.operator, left, right);
         return (double) left - (double) right;
@@ -95,8 +132,8 @@ public class Interpreter implements Expr.Visitor<Object> {
   }
 
   @Override
-  public Object visitGroupingExpr(final Grouping expr) {
-    return evaluate(expr.expression);
+  public Object visitGroupingExpr(final Expr.Grouping expr) {
+    return evaluate(expr.expressions);
   }
 
   private Object evaluate(final Expr expression) {
@@ -136,6 +173,40 @@ public class Interpreter implements Expr.Visitor<Object> {
     if (object instanceof Boolean)
       return (boolean) object;
     return true;
+  }
+
+  @Override
+  public Void visitExpressionStmt(Stmt.Expression stmt) {
+    evaluate(stmt.expression);
+    return null;
+  }
+
+  @Override
+  public Void visitPrintStmt(Stmt.Print stmt) {
+    Object value = evaluate(stmt.expression);
+    System.out.println(stringify(value));
+    return null;
+  }
+
+  @Override
+  public Void visitVarStmt(Stmt.Var stmt) {
+    Object value = null;
+    if (stmt.initializer != null)
+      value = evaluate(stmt.initializer);
+
+    environment.define(stmt.name.lexeme, value);
+    return null;
+  }
+
+  @Override
+  public Object visitVariableExpr(Expr.Variable expr) {
+    return environment.get(expr.name);
+  }
+
+  @Override
+  public Void visitBlockStmt(Stmt.Block stmt) {
+    executeBlock(stmt.statements, new Environment(environment));
+    return null;
   }
 
 }

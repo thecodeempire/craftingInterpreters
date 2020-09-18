@@ -2,6 +2,7 @@ package interpreter;
 
 import static interpreter.TokenType.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Parser {
@@ -9,31 +10,101 @@ public class Parser {
   private int current = 0;
 
   private static class ParseError extends RuntimeException {
-
   }
 
-  Parser(List<Token> tokens) {
+  Parser(final List<Token> tokens) {
     this.tokens = tokens;
   }
 
-  Expr parse() {
+  List<Stmt> parse() {
+    final List<Stmt> statements = new ArrayList<>();
+    while (!isAtEnd())
+      statements.add(declaration());
+
+    return statements;
+  }
+
+  private Stmt declaration() {
     try {
-      return expression();
+      if (match(VAR))
+        return varDeclaration();
+      return statement();
     } catch (ParseError error) {
+      synchronize();
       return null;
     }
   }
 
+  private Stmt varDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect variable name.");
+    Expr initializer = null;
+
+    if (match(EQUAL))
+      initializer = expression();
+
+    consume(SEMICOLON, "Expect ';' after variable declaration.");
+    return new Stmt.Var(name, initializer);
+  }
+
+  private Stmt statement() {
+    if (match(PRINT))
+      return printStatement();
+    if (match(LEFT_BRACE))
+      return new Stmt.Block(block());
+    return expressionStatement();
+  }
+
+  private Stmt printStatement() {
+    Expr value = expression();
+    consume(SEMICOLON, "Expect ';' after expression.");
+    return new Stmt.Print(value);
+  }
+
+  private Stmt expressionStatement() {
+    Expr expr = expression();
+    consume(SEMICOLON, "Expect ';' after expression.");
+    return new Stmt.Expression(expr);
+  }
+
+  private List<Stmt> block() {
+    List<Stmt> statements = new ArrayList<>();
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      statements.add(declaration());
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after block");
+    return statements;
+  }
+
+  private Expr assignment() {
+    Expr expr = equality();
+
+    if (match(EQUAL)) {
+      Token equals = previous();
+      Expr value = assignment();
+
+      if (expr instanceof Expr.Variable) {
+        Token name = ((Expr.Variable) expr).name;
+        return new Expr.Assign(name, value);
+      }
+
+      error(equals, "Invalid assignment target.");
+    }
+
+    return expr;
+  }
+
   private Expr expression() {
-    return equality();
+    return assignment();
   }
 
   private Expr equality() {
     Expr expr = comparison();
 
     while (match(BANG_EQUAL, EQUAL_EQUAL)) {
-      Token operator = previous();
-      Expr right = comparison();
+      final Token operator = previous();
+      final Expr right = comparison();
       expr = new Expr.Binary(expr, operator, right);
     }
 
@@ -44,8 +115,8 @@ public class Parser {
     Expr expr = addition();
 
     while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
-      Token operator = previous();
-      Expr right = addition();
+      final Token operator = previous();
+      final Expr right = addition();
       expr = new Expr.Binary(expr, operator, right);
     }
     return expr;
@@ -55,8 +126,8 @@ public class Parser {
     Expr expr = multiplication();
 
     while (match(MINUS, PLUS)) {
-      Token operator = previous();
-      Expr right = multiplication();
+      final Token operator = previous();
+      final Expr right = multiplication();
       expr = new Expr.Binary(expr, operator, right);
     }
 
@@ -67,8 +138,8 @@ public class Parser {
     Expr expr = unary();
 
     while (match(SLASH, STAR)) {
-      Token operator = previous();
-      Expr right = unary();
+      final Token operator = previous();
+      final Expr right = unary();
       expr = new Expr.Binary(expr, operator, right);
     }
 
@@ -77,8 +148,8 @@ public class Parser {
 
   private Expr unary() {
     if (match(BANG, MINUS)) {
-      Token operator = previous();
-      Expr right = unary();
+      final Token operator = previous();
+      final Expr right = unary();
       return new Expr.Unary(operator, right);
     }
 
@@ -96,11 +167,15 @@ public class Parser {
     if (match(NUMBER, STRING))
       return new Expr.Literal(previous().literal);
 
+    if (match(IDENTIFIER))
+      return new Expr.Variable(previous());
+
     if (match(LEFT_PAREN)) {
-      Expr expr = expression();
+      final Expr expr = expression();
       consume(RIGHT_PAREN, "Expect ) after expression");
       return new Expr.Grouping(expr);
     }
+
     throw error(peek(), "Expect expression..");
   }
 
@@ -121,27 +196,28 @@ public class Parser {
         case PRINT:
         case RETURN:
           return;
+        default:
+          break;
       }
 
       advance();
     }
   }
 
-  private ParseError error(Token token, String message) {
+  private ParseError error(final Token token, final String message) {
     App.error(token, message);
     return new ParseError();
   }
 
-  private Token consume(TokenType type, String message) {
-
+  private Token consume(final TokenType type, final String message) {
     if (check(type))
       return advance();
     throw error(peek(), message);
 
   }
 
-  private boolean match(TokenType... types) {
-    for (TokenType type : types) {
+  private boolean match(final TokenType... types) {
+    for (final TokenType type : types) {
       if (check(type)) {
         advance();
         return true;
@@ -154,10 +230,10 @@ public class Parser {
   private Token advance() {
     if (!isAtEnd())
       current++;
-    return null;
+    return previous();
   }
 
-  private boolean check(TokenType type) {
+  private boolean check(final TokenType type) {
     return isAtEnd() ? false : peek().type == type;
   }
 

@@ -6,7 +6,7 @@ macro_rules! enum_str {
         $($variant:ident $(= $val:expr)?),*,
     }) => {
         #[allow(dead_code)]
-        #[derive(Copy, Clone)]
+        #[derive(Copy, Clone )]
         #[allow(non_camel_case_types)]
         #[derive(Debug)]
         $vis enum $name {
@@ -24,59 +24,83 @@ macro_rules! enum_str {
 }
 
 enum_str! {
-pub enum TokenType {
-    // ------ SINGLE CHARACTER TOKENS ----------
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
-    COMMA,
-    DOT,
-    MINUS,
-    PLUS,
-    SEMICOLON,
-    COLON,
-    SLASH,
-    STAR,
-    QUESTION,
-    TERNARY,
+    pub enum TokenType {
+        // ------ SINGLE CHARACTER TOKENS ----------
+        LEFT_PAREN,
+        RIGHT_PAREN,
+        LEFT_BRACE,
+        RIGHT_BRACE,
+        COMMA,
+        DOT,
+        MINUS,
+        PLUS,
+        SEMICOLON,
+        COLON,
+        SLASH,
+        STAR,
+        QUESTION,
+        TERNARY,
 
-    // ------ ONE OR TWO CHARACTER TOKENS --------
-    BANG,
-    BANG_EQUAL,
-    EQUAL,
-    EQUAL_EQUAL,
-    GREATER,
-    GREATER_EQUAL,
-    LESS,
-    LESS_EQUAL,
+        // ------ ONE OR TWO CHARACTER TOKENS --------
+        BANG,
+        BANG_EQUAL,
+        EQUAL,
+        EQUAL_EQUAL,
+        GREATER,
+        GREATER_EQUAL,
+        LESS,
+        LESS_EQUAL,
 
-    // ------ LITERALS ----------
-    IDENTIFIER,
-    STRING,
-    NUMBER,
+        // ------ LITERALS ----------
+        IDENTIFIER,
+        STRING,
+        NUMBER,
 
-    // ------ KEYWORDS -------
-    AND,
-    CLASS,
-    ELSE,
-    FALSE,
-    FUN,
-    FOR,
-    IF,
-    NIL,
-    OR,
-    PRINT,
-    RETURN,
-    SUPER,
-    THIS,
-    TRUE,
-    VAR,
-    WHILE,
+        // ------ KEYWORDS -------
+        AND,
+        CLASS,
+        ELSE,
+        FALSE,
+        FUN,
+        FOR,
+        IF,
+        NIL,
+        OR,
+        PRINT,
+        RETURN,
+        SUPER,
+        THIS,
+        TRUE,
+        VAR,
+        WHILE,
 
-    // -------- OTHERS ---------
-    EOF,
+        // -------- OTHERS ---------
+        EOF,
+    }
 }
+
+impl TokenType {
+    pub fn from_string(st: &str) -> Option<Self> {
+        match st {
+            "class" => Some(TokenType::CLASS),
+            "else" => Some(TokenType::ELSE),
+            "false" => Some(TokenType::FALSE),
+            "for" => Some(TokenType::FOR),
+            "fun" => Some(TokenType::FUN),
+            "if" => Some(TokenType::IF),
+            "nil" => Some(TokenType::NIL),
+            "or" => Some(TokenType::OR),
+            "print" => Some(TokenType::PRINT),
+            "return" => Some(TokenType::RETURN),
+            "super" => Some(TokenType::SUPER),
+            "this" => Some(TokenType::THIS),
+            "true" => Some(TokenType::TRUE),
+            "var" => Some(TokenType::VAR),
+            "while" => Some(TokenType::WHILE),
+            "and" => Some(TokenType::AND),
+            _ => None,
+        }
+    }
 }
 
 impl PartialEq for TokenType {
@@ -85,7 +109,6 @@ impl PartialEq for TokenType {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum Literal {
     Number(f64),

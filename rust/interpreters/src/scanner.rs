@@ -1,71 +1,35 @@
+use crate::error::Error::{self, CompileTimeError};
 use crate::token::{Literal, Token, TokenType, TokenType::*};
-use crate::Runner;
-use std::collections::HashMap;
 
-pub struct Scanner<'a> {
+pub struct Scanner {
     source: String,
     tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
-    pub keywords: HashMap<String, TokenType>,
-    runner: &'a Runner,
 }
 
-macro_rules! map(
-    { $($key:expr => $value:expr),+ } => {
-        {
-            let mut m = ::std::collections::HashMap::new();
-            $(
-                m.insert(String::from($key), $value);
-            )+
-            m
-        }
-     };
-);
-
-impl<'a> Scanner<'a> {
-    pub fn new(source: String, runner: &'a Runner) -> Scanner<'a> {
-        let keywords = map! {
-            "class" => CLASS,
-            "else" => ELSE,
-            "false" => FALSE,
-            "for" => FOR,
-            "fun" => FUN,
-            "if" => IF,
-            "nil" => NIL,
-            "or" => OR,
-            "print" => PRINT,
-            "return" => RETURN,
-            "super" => SUPER,
-            "this" => THIS,
-            "true" => TRUE,
-            "var" => VAR,
-            "while" => WHILE,
-            "and" => AND
-        };
-
+impl Scanner {
+    pub fn new(source: String) -> Scanner {
         Scanner {
             source,
             tokens: vec![],
             start: 0,
             current: 0,
             line: 0,
-            keywords,
-            runner,
         }
     }
 
-    pub fn scan_tokens(&mut self) -> &Vec<Token> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Error> {
         while !self.is_at_end() {
             self.start = self.current;
-            self.scan_token()
+            self.scan_token()?
         }
         self.tokens.push(Token::new(EOF, "EOF", None, self.line));
-        &self.tokens
+        Ok(self.tokens)
     }
 
-    pub fn scan_token(&mut self) {
+    pub fn scan_token(&mut self) -> Result<(), Error> {
         let c = self.advance();
 
         match c {
@@ -118,25 +82,26 @@ impl<'a> Scanner<'a> {
             }
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
-            '"' => self.string(),
+            '"' => self.string()?,
             _ => {
                 if self.is_digit(c) {
                     self.number();
                 } else if self.is_alpha(c) {
                     self.identifier();
                 } else {
-                    self.runner.error(
-                        &Token::new(
+                    return Err(CompileTimeError {
+                        token: Some(Token::new(
                             TokenType::NIL,
                             &c.clone().to_string().as_str(),
                             None,
                             self.line,
-                        ),
-                        "Unexpected character",
-                    );
+                        )),
+                        message: String::from("Unexpected character"),
+                    });
                 }
             }
         };
+        Ok(())
     }
 
     fn handle_multi_line_comments(&mut self) {
@@ -159,16 +124,9 @@ impl<'a> Scanner<'a> {
         while self.is_alpha_numeric(self.peek()) {
             self.advance();
         }
-        let text = self.source[self.start..self.current - 1].to_string();
-        let token_type = self.keywords.get(&text);
-
-        let tt: TokenType = if token_type.is_none() {
-            IDENTIFIER
-        } else {
-            let t = *(token_type.clone()).unwrap();
-            t
-        };
-
+        let text = self.source[self.start..self.current].to_string();
+        let token_type = TokenType::from_string(&text);
+        let tt = token_type.unwrap_or(IDENTIFIER);
         self.add_token(tt, None);
     }
 
@@ -176,7 +134,7 @@ impl<'a> Scanner<'a> {
         self.is_alpha(c) || self.is_digit(c)
     }
 
-    fn number(&mut self) {
+    fn number(&mut self) -> Result<(), Error> {
         if !self.is_at_end() {
             while !self.is_at_end() && self.is_digit(self.peek()) {
                 self.advance();
@@ -188,27 +146,23 @@ impl<'a> Scanner<'a> {
                 while !self.is_at_end() && self.is_digit(self.peek()) {
                     self.advance();
                 }
-
-                self.current -= 1;
-            } else {
-                self.current -= 1;
             }
 
             if self.is_alpha(self.peek_next()) {
-                self.runner.error(
-                    &Token::new(
+                return Err(CompileTimeError {
+                    token: Some(Token::new(
                         TokenType::NIL,
                         &self.peek_next().clone().to_string(),
                         None,
                         self.line,
-                    ),
-                    "Unexpected character check your number!",
-                );
+                    )),
+                    message: String::from("Unexpected character. check your number"),
+                });
             }
         }
 
         // this is to normalize the advanced current value
-        let num = match self.source[self.start..self.current]
+        let num = match self.source[self.start..(self.current)]
             .trim()
             .parse::<f64>()
             .ok()
@@ -217,7 +171,8 @@ impl<'a> Scanner<'a> {
             Some(num) => num,
         };
 
-        self.add_token(NUMBER, Some(Literal::Number(num)))
+        self.add_token(NUMBER, Some(Literal::Number(num)));
+        Ok(())
     }
 
     fn peek_next(&self) -> char {
@@ -235,20 +190,32 @@ impl<'a> Scanner<'a> {
         c >= '0' && c <= '9'
     }
 
-    fn string(&mut self) {
-        while self.peek() != '"' && self.is_at_end() {
+    fn string(&mut self) -> Result<(), Error> {
+        while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
             }
             self.advance();
         }
+        if self.is_at_end() {
+            return Err(CompileTimeError {
+                token: Some(Token::new(NIL, "EOF", None, self.line)),
+                message: String::from("Unterminated string"),
+            });
+        }
+
+        self.advance();
+
+        let value = &self.source[self.start + 1..self.current - 1].to_string();
+        self.add_token(STRING, Some(Literal::Str(value.to_string())));
+        Ok(())
     }
 
     fn peek(&self) -> char {
         if self.is_at_end() {
             return '\0';
         }
-        self.source.chars().nth(self.current - 1).unwrap()
+        self.source.chars().nth(self.current).unwrap()
     }
 
     fn matching(&mut self, expected: char) -> bool {

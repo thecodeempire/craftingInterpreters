@@ -1,22 +1,22 @@
-use crate::expr::{Expr, Visitor};
+use crate::expr::Expr;
 
 #[macro_export]
 macro_rules! parenthesize_rpn {
     ($name:expr $(, $arg:expr)* ) => {{
-       let mut s = String::new();
-       $(
-           let string_from: String = $arg.print_rpn();
-           s.push_str(&string_from);
-           s.push(' ');
+        let mut s = String::new();
+        $(
+            let string_from: String = $arg.print_rpn();
+            s.push_str(&string_from);
+            s.push(' ');
         )*
-        s.push_str(&$name);
+            s.push_str(&$name);
         s
     }};
 }
 
-impl<'a> Expr<'a> {
+impl Expr {
     pub fn print(&self) -> String {
-        let a: String = self.visit();
+        let a: String = self.visit_string();
         a
     }
 }
@@ -25,7 +25,7 @@ pub trait RPN {
     fn print_rpn(&self) -> String;
 }
 
-impl<'a> RPN for Expr<'a> {
+impl RPN for Expr {
     fn print_rpn(&self) -> String {
         match self {
             Expr::Binary(left_expr, ops, right_expr) => {
@@ -40,6 +40,10 @@ impl<'a> RPN for Expr<'a> {
             Expr::Ternary(condition, first, second, _line) => {
                 parenthesize_rpn!("ternary", condition, first, second)
             }
+            Expr::Assign { name, value } => {
+                format!("{} = {}", name.to_string(), parenthesize_rpn!("", &value))
+            }
+            Expr::Variable(name) => name.to_string(),
         }
     }
 }
@@ -52,16 +56,13 @@ mod test {
 
     #[test]
     fn ast_printer_basics() {
-        let tok_star = &Token::new(TokenType::STAR, "*", None, 1);
-        let tok_minus = &Token::new(TokenType::MINUS, "-", None, 1);
-
         let expression = Binary(
             Box::new(Unary(
-                tok_minus,
-                Box::new(LiteralExpr(Some(&Number(123 as f64)))),
+                Token::new(TokenType::MINUS, "-", None, 1),
+                Box::new(LiteralExpr(Some(Number(123 as f64)))),
             )),
-            &tok_star,
-            Box::new(Grouping(Box::new(LiteralExpr(Some(&Number(45.67)))))),
+            Token::new(TokenType::STAR, "*", None, 1),
+            Box::new(Grouping(Box::new(LiteralExpr(Some(Number(45.67)))))),
         );
 
         assert_eq!("(* (- 123) (group 45.67))", expression.print());
@@ -74,15 +75,15 @@ mod test {
         let tok_minus = Token::new(TokenType::MINUS, "-", None, 1);
         let expression = Binary(
             Box::new(Binary(
-                Box::new(LiteralExpr(Some(&Number(1 as f64)))),
-                &tok_plus,
-                Box::new(LiteralExpr(Some(&Number(2 as f64)))),
+                Box::new(LiteralExpr(Some(Number(1 as f64)))),
+                tok_plus,
+                Box::new(LiteralExpr(Some(Number(2 as f64)))),
             )),
-            &tok_star,
+            tok_star,
             Box::new(Binary(
-                Box::new(LiteralExpr(Some(&Number(4 as f64)))),
-                &tok_minus,
-                Box::new(LiteralExpr(Some(&Number(3 as f64)))),
+                Box::new(LiteralExpr(Some(Number(4 as f64)))),
+                tok_minus,
+                Box::new(LiteralExpr(Some(Number(3 as f64)))),
             )),
         );
 

@@ -18,10 +18,10 @@ public class App {
     private static final Interpreter interpreter = new Interpreter();
 
     public String getGreeting() {
-        return "Hello world.";
+        return "Hello World";
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(final String[] args) throws IOException {
         if (args.length > 1) {
             System.out.println("Usage: jlox [script]");
             System.exit(64);
@@ -33,11 +33,11 @@ public class App {
     }
 
     private static void runPrompt() {
-        InputStreamReader input = new InputStreamReader(System.in);
-        BufferedReader reader = new BufferedReader(input);
+        final InputStreamReader input = new InputStreamReader(System.in);
+        final BufferedReader reader = new BufferedReader(input);
 
         while (true) {
-            System.out.println("> ");
+            System.out.print("> ");
             String line;
             try {
                 line = reader.readLine();
@@ -45,14 +45,14 @@ public class App {
                     break;
                 run(line);
                 hadError = false;
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private static void runFile(String path) throws IOException {
-        byte[] bytes = Files.readAllBytes(Paths.get(path));
+    private static void runFile(final String path) throws IOException {
+        final byte[] bytes = Files.readAllBytes(Paths.get(path));
         run(new String(bytes, Charset.defaultCharset()));
         if (hadError)
             System.exit(65);
@@ -60,28 +60,31 @@ public class App {
             System.exit(70);
     }
 
-    private static void run(String source) {
+    private static void run(final String source) {
         // This is where the interpreter starts
-        Scanner scanner = new Scanner(source);
-        List<Token> tokens = scanner.scanTokens();
+        final Scanner scanner = new Scanner(source);
+        final List<Token> tokens = scanner.scanTokens();
 
-        Parser parser = new Parser(tokens);
-        Expr expression = parser.parse();
+        // for (Token token : tokens) {
+        // System.out.println(token);
+        // }
+
+        final Parser parser = new Parser(tokens);
+        final List<Stmt> expression = parser.parse();
 
         // Stop if there was a syntax error
         if (hadError)
             return;
 
         interpreter.interpret(expression);
-        // System.out.println(new AstPrinter().print(expression));
     }
 
-    static void runtimeError(RuntimeError error) {
+    static void runtimeError(final RuntimeError error) {
         System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
         hadRuntimeError = true;
     }
 
-    static void error(Token token, String message) {
+    static void error(final Token token, final String message) {
         if (token.type == TokenType.EOF) {
             report(token.line, " at end ", message);
         } else {
@@ -89,7 +92,7 @@ public class App {
         }
     }
 
-    private static void report(int line, String where, String message) {
+    private static void report(final int line, final String where, final String message) {
         System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
     }

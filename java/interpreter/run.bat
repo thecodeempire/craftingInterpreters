@@ -1,3 +1,4 @@
 @echo off
 cd bin/main
-java interpreter/App
+java interpreter/App a.lox
+

@@ -1,11 +1,49 @@
 package interpreter;
 
+import static interpreter.TokenType.AND;
+import static interpreter.TokenType.BANG;
+import static interpreter.TokenType.BANG_EQUAL;
+import static interpreter.TokenType.CLASS;
+import static interpreter.TokenType.COMMA;
+import static interpreter.TokenType.DOT;
+import static interpreter.TokenType.ELSE;
+import static interpreter.TokenType.EOF;
+import static interpreter.TokenType.EQUAL;
+import static interpreter.TokenType.EQUAL_EQUAL;
+import static interpreter.TokenType.FALSE;
+import static interpreter.TokenType.FOR;
+import static interpreter.TokenType.FUN;
+import static interpreter.TokenType.GREATER;
+import static interpreter.TokenType.GREATER_EQUAL;
+import static interpreter.TokenType.IDENTIFIER;
+import static interpreter.TokenType.IF;
+import static interpreter.TokenType.LEFT_BRACE;
+import static interpreter.TokenType.LEFT_PAREN;
+import static interpreter.TokenType.LESS;
+import static interpreter.TokenType.LESS_EQUAL;
+import static interpreter.TokenType.MINUS;
+import static interpreter.TokenType.NIL;
+import static interpreter.TokenType.NUMBER;
+import static interpreter.TokenType.OR;
+import static interpreter.TokenType.PLUS;
+import static interpreter.TokenType.PRINT;
+import static interpreter.TokenType.RETURN;
+import static interpreter.TokenType.RIGHT_BRACE;
+import static interpreter.TokenType.RIGHT_PAREN;
+import static interpreter.TokenType.SEMICOLON;
+import static interpreter.TokenType.SLASH;
+import static interpreter.TokenType.STAR;
+import static interpreter.TokenType.STRING;
+import static interpreter.TokenType.SUPER;
+import static interpreter.TokenType.THIS;
+import static interpreter.TokenType.TRUE;
+import static interpreter.TokenType.VAR;
+import static interpreter.TokenType.WHILE;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static interpreter.TokenType.*;
 
 public class Scanner {
   private final String source;
@@ -198,7 +236,7 @@ public class Scanner {
   }
 
   private void string() {
-    while (peek() != '"' && isAtEnd()) {
+    while (peek() != '"' && !isAtEnd()) {
       if (peek() == '\n')
         line++;
       advance();

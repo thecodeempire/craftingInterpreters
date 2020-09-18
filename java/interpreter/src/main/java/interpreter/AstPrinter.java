@@ -1,5 +1,8 @@
 package interpreter;
 
+import interpreter.Expr.Assign;
+import interpreter.Expr.Variable;
+
 public class AstPrinter implements Expr.Visitor<String> {
   String print(final Expr expr) {
     return expr.accept(this);
@@ -12,7 +15,7 @@ public class AstPrinter implements Expr.Visitor<String> {
 
   @Override
   public String visitGroupingExpr(final Expr.Grouping expr) {
-    return parenthesize("group", expr.expression);
+    return parenthesize("group", expr.expressions);
   }
 
   @Override
@@ -46,5 +49,17 @@ public class AstPrinter implements Expr.Visitor<String> {
         new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Expr.Literal(123)),
         new Token(TokenType.STAR, "*", null, 1), new Expr.Grouping(new Expr.Literal(45.67)));
     System.out.println(new AstPrinter().print(expression));
+  }
+
+  @Override
+  public String visitVariableExpr(Variable expr) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public String visitAssignExpr(Assign expr) {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

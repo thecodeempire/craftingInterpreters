@@ -2,17 +2,23 @@ use crate::token::Token;
 use snafu::Snafu;
 
 #[derive(Debug, Snafu)]
-pub enum Error<'a> {
-    #[snafu(display("Syntax Error in line: {}. Error: {}", token.to_string(), message))]
-    CompileTimeError { token: &'a Token, message: String },
+pub enum Error {
+    #[snafu(display("Syntax Error in line: {}. Error: {}", match token { Some(token) => token.to_string(), None => "None".to_string() }, message))]
+    CompileTimeError {
+        token: Option<Token>,
+        message: String,
+    },
 
     #[snafu(display(
         "Error evaluating in line: {}, place: {}. Error: {}",
-        token.line,
-        token.lexeme,
+        match token { Some(token) => token.line , None => 0 },
+        match token { Some(token) => token.lexeme , None => String::from("") },
         message
     ))]
-    RuntimeError { token: &'a Token, message: String },
+    RuntimeError {
+        token: Option<Token>,
+        message: String,
+    },
 }
 
-impl<'a> Error<'a> {}
+impl Error {}

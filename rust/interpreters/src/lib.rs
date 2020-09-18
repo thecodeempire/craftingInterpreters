@@ -1,14 +1,15 @@
 pub mod ast_printer;
+mod environment;
 pub mod error;
 pub mod expr;
 pub mod interpreter;
 pub mod parser;
 pub mod scanner;
+mod stmt;
 pub mod token;
 mod typer;
 
 use crate::error::Error;
-use crate::parser::ParseError;
 use core::cell::RefCell;
 use interpreter::Interpreter;
 use parser::Parser;
@@ -17,11 +18,6 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::{Read, Write};
 use std::process;
-
-pub struct Runner {
-    pub had_error: RefCell<bool>,
-    pub had_runtime_error: RefCell<bool>,
-}
 
 trait Throw<E> {
     fn throw(&self, callback: impl Fn(&E) -> String);
@@ -33,6 +29,11 @@ impl<V, E> Throw<E> for Result<V, E> {
     }
 }
 
+pub struct Runner {
+    pub had_error: RefCell<bool>,
+    pub had_runtime_error: RefCell<bool>,
+}
+
 impl Runner {
     pub fn new() -> Self {
         Runner {
@@ -41,22 +42,20 @@ impl Runner {
         }
     }
 
-    pub fn run(&self, source: String) -> Result<(), ParseError> {
-        let mut scanner = Scanner::new(source, self);
-        let tokens = scanner.scan_tokens();
+    pub fn run(&self, source: String) -> Result<(), Error> {
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens()?;
 
         for tok in tokens {
             println!("{}", tok.to_string());
         }
 
-        let parser = Parser::new(tokens, self);
+        let parser = Parser::new(tokens);
         let expr = parser.parse()?;
-        if *self.had_error.borrow() {
-            return Err(ParseError::PARSE_ERROR1);
-        }
 
-        let expr_str = Interpreter::new(self).interpret(&expr).unwrap();
-        println!("{}", expr_str);
+        Interpreter::new()
+            .interpret(expr)
+            .unwrap_or_else(|_err| String::from("Error"));
 
         Ok(())
     }
@@ -86,7 +85,8 @@ impl Runner {
 
             let mut line = String::new();
             io::stdin().read_line(&mut line)?;
-            self.run(line).expect("Error in running the line");
+            self.run(line)
+                .throw(|err| format!("Err: {}", err.to_string()));
             *self.had_error.borrow_mut() = false;
         }
     }
@@ -104,11 +104,11 @@ impl Runner {
 
     pub fn runtime_error(&self, error: &Error) {
         *self.had_runtime_error.borrow_mut() = true;
-        panic!(error.to_string());
+        eprintln!("{}", error.to_string());
     }
 
     fn report(&self, line: usize, which: &str, message: &str) {
-        println!("[line {}] Error {} : {}", line, which, message);
+        eprintln!("[line {}] Error {} : {}", line, which, message);
         *self.had_error.borrow_mut() = true;
     }
 }
