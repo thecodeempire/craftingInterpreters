@@ -50,7 +50,7 @@ impl Stmt {
     ) -> Result<(), Error> {
         self.execute_block(
             statements,
-            Environment::new(*interpreter.environment.borrow()),
+            Environment::new(interpreter.environment.borrow()),
             interpreter,
         );
         Ok(())

@@ -1,0 +1,28 @@
+var a = "global a";
+var b = "global b";
+var c = "global c";
+var d = 1 * 2 / 4;
+print d == 0.5 ? a : b;
+{
+
+  print d;
+  var d = d + 2;
+  var a = "outer a";
+  var b = "outer b";
+  c = "global c edited";
+  print "d: " + d;
+  print a;
+  {
+    var a = "inner a";
+    b = "outer b edited";
+    print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
+}
+print a;
+print b;
+print c;

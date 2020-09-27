@@ -178,7 +178,6 @@ impl Expr {
     }
 
     pub fn visit_assign(&self, name: Expr, token: Token) -> Result<Typer, Error> {
-        // TODO!!!
         Ok(Typer::Nil)
     }
 

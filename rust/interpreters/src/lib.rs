@@ -46,7 +46,7 @@ impl Runner {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens()?;
 
-        for tok in tokens {
+        for tok in &tokens {
             println!("{}", tok.to_string());
         }
 
