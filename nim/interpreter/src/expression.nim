@@ -1,36 +1,37 @@
 import token
 import strformat
 import errors
+import common_types
 
-type
-  ExprKind* = enum
-    TERNARYEXPR, BINARYEXPR, GROUPINGEXPR, NILEXPR,
-    LITERALEXPR, UNARYEXPR, ASSIGNEXPR, VAREXPR
-  Expr* = ref object
-    case kind*: ExprKind
-    of TERNARYEXPR: ternaryVal*: tuple[condition: Expr, first: Expr, second: Expr, token: Token]
-    of BINARYEXPR: binaryVal*: tuple[first: Expr, operation: Token, second: Expr]
-    of GROUPINGEXPR: groupingVal*: Expr
-    of LITERALEXPR: literalVal*: Literal
-    of UNARYEXPR: unaryVal*: tuple[operator: Token, expr: Expr]
-    of ASSIGNEXPR: assignVal*: tuple[name: Token, value: Expr]
-    of VAREXPR: variableVal*: Token
-    of NILEXPR: nilVal*: int
+proc `$`*(expr: Expr): string
+
+proc `$`(seqExpr: seq[Expr]): string=
+  var str = ""
+  for i, exp in seqExpr:
+    str &= $exp
+  return str
 
 proc `$`*(expr: Expr): string=
   case expr.kind:
-  of TERNARYEXPR: return fmt"""({$expr.ternaryVal.condition}, {$expr.ternaryVal.first}, {$expr.ternaryVal.second}, {$expr.ternaryVal.token}"""
-  of BINARYEXPR: return fmt"""({$expr.binaryVal.first}, {$expr.binaryVal.operation}, {$expr.binaryVal.second})"""
-  of GROUPINGEXPR: return $expr.groupingVal
-  of LITERALEXPR: return $expr.literalVal
-  of UNARYEXPR: return fmt"""({$expr.unaryVal.operator}, {$expr.unaryVal.expr})"""
-  of ASSIGNEXPR: return fmt"""({$expr.assignVal.name}, {$expr.assignVal.value})"""
-  of VAREXPR: return $expr.variableVal
+  of TERNARYEXPR: return fmt"""
+    (TERNARYEXPR, {$expr.ternaryVal.condition}, {$expr.ternaryVal.first}, {$expr.ternaryVal.second}, {$expr.ternaryVal.token}"""
+  of BINARYEXPR: return fmt"""
+    (BINARYEXPR, {$expr.binaryVal.first}, {$expr.binaryVal.operation}, {$expr.binaryVal.second})"""
+  of GROUPINGEXPR: return fmt"""
+    (GROUPINGEXPR, {$expr.groupingVal})"""
+  of LITERALEXPR: return fmt"""
+    (LITERALEXPR, {$expr.literalVal})"""
+  of UNARYEXPR: return fmt"""
+    (UNARYEXPR, {$expr.unaryVal.operator}, {$expr.unaryVal.expr})"""
+  of ASSIGNEXPR: return fmt"""
+    (ASSIGNEXPR, {$expr.assignVal.name}, {$expr.assignVal.value})"""
+  of VAREXPR: return fmt"""
+    (VAREXPR, {$expr.variableVal})"""
   of NILEXPR: return $expr.nilVal
-
-
-let DefaultExpr*: Expr = Expr(kind: NILEXPR, nilVal: 0)
-
+  of LOGICALEXPR: return fmt"""
+    (LOGICALEXPR, {$expr.logicalVal.first}, {$expr.logicalVal.operator}, {$expr.logicalVal.second})"""
+  of CALLEXPR: return fmt"""
+    (CALLEXPR, {$expr.callVal.callee}, {$expr.callVal.paren}, {$expr.callVal.arguments})"""
 
 proc errorLit*(operation: Token, message: string): Literal =
   compileTimeError(operation, message)

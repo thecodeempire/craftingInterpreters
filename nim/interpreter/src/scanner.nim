@@ -1,14 +1,7 @@
-import token
+import common_types
 import errors
 import strutils
-
-type
-  Scanner = object
-    source: string
-    tokens: seq[Token]
-    start: int
-    current: int
-    line: int
+import token
 
 # ------- declarations -------
 proc isAtEnd(self: Scanner): bool

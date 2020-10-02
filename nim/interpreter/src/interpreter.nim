@@ -2,8 +2,6 @@ import os
 import scanner
 import rdstdin
 import errors
-
-import statement
 import parser
 import intrptr
 
@@ -19,7 +17,7 @@ proc run(source: string)=
   let statements = parser.parse()
 
 #  for i, statement in statements:
-#    echo $statement.kind
+#    echo $statement
 
   if hadCompileTimeError and hadRunTimeError: return
 

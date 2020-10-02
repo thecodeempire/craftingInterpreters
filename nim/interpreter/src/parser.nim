@@ -1,19 +1,17 @@
-import token
-import expression
 import statement
 import errors
-
-type
-  Parser = object
-    tokens: seq[Token]
-    current: int
+import common_types
 
 proc isAtEnd(self: Parser): bool
 proc declaration(self: var Parser): Stmt
 proc parseStatement(self: var Parser): Stmt
+proc ifStatement(self: var Parser): Stmt
+proc forStatement(self: var Parser): Stmt
+proc whileStatement(self: var Parser): Stmt
 proc varDeclaration(self: var Parser): Stmt
 proc printStatement(self: var Parser): Stmt
 proc expressionStatement(self: var Parser): Stmt
+proc functionStatement(self: var Parser, kind: string): Stmt
 proc blockStmt(self: var Parser): seq[Stmt]
 proc assignment(self: var Parser): Expr
 proc parseExpression(self: var Parser): Expr
@@ -25,6 +23,8 @@ proc addition(self: var Parser): Expr
 proc multiplication(self: var Parser): Expr
 proc peek(self: Parser): Token
 proc previous(self: Parser): Token
+proc orExpr(self: var Parser): Expr
+proc andExpr(self: var Parser): Expr
 proc check(self: Parser, token_type: TokenType): bool
 proc advance(self: var Parser): Token
 proc match(self: var Parser, types: varargs[TokenType]): bool
@@ -46,24 +46,91 @@ proc parse*(self: var Parser): seq[Stmt]=
 
 proc declaration(self: var Parser): Stmt=
   try:
-    if self.match(VAR):
-      return self.varDeclaration()
+    if self.match(FUN): return self.functionStatement("function")
+    if self.match(VAR): return self.varDeclaration()
     return self.parseStatement()
   except:
     self.synchronize()
 
+proc functionStatement(self: var Parser, kind: string): Stmt=
+  let name = self.consume(IDENTIFIER, "Expect " & kind & " name.")
+  discard self.consume(LEFT_PAREN, "Expect '(' after " & kind & " name.")
+  var parameters = newSeq[Token]()
+
+  if not self.check(RIGHT_PAREN):
+    while true:
+      if parameters.len() >= 255:
+        self.error(self.peek(), "Cannot have more than 255 parameters")
+      parameters.add(self.consume(IDENTIFIER, "Expect parameter name"))
+      if not self.match(COMMA): break
+
+  discard self.consume(RIGHT_PAREN, "Expect ')' after parameters")
+  discard self.consume(LEFT_BRACE, "Expect '{' before " & kind & " body.")
+  let body = self.blockStmt()
+  return Stmt(kind: FUNCSTMT, funcStmt: (name, parameters, body))
+
 proc parseStatement(self: var Parser): Stmt=
+  if self.match IF: return self.ifStatement()
+  if self.match FOR: return self.forStatement()
+  if self.match WHILE: return self.whileStatement()
   if self.match PRINT: return self.printStatement()
   if self.match LEFT_BRACE: return Stmt(kind: BLOCKSTMT, statements: self.blockStmt())
   return self.expressionStatement()
 
-proc varDeclaration(self: var Parser): Stmt=
+proc varDeclaration(self: var Parser):Stmt=
   let name = self.consume(IDENTIFIER, "Expect variable name")
   var initializer = DefaultExpr
   if self.match EQUAL:
     initializer = self.parseExpression()
   discard self.consume(SEMICOLON, "Expect ';' after variable declaration")
   return Stmt(kind: VARSTMT, varStmt: (name, initializer))
+
+proc whileStatement(self: var Parser): Stmt=
+  discard self.consume(LEFT_PAREN, "Expect '(' after 'while'.")
+  let condition = self.parseExpression()
+  discard self.consume(RIGHT_PAREN, "Expect ')' after condition.")
+  let body = self.parseStatement()
+  return Stmt(kind: WHILESTMT, whileStmt: (condition, body))
+
+proc ifStatement(self: var Parser): Stmt=
+  discard self.consume(LEFT_PAREN, "Expect '(' after 'if'.")
+  let condition = self.parseExpression()
+
+  discard self.consume(RIGHT_PAREN, "Expect ')' after if condition.")
+  let thenBranch = self.parseStatement()
+
+  var elseBranch = DefaultStmt
+  if self.match(ELSE):
+    elseBranch = self.parseStatement()
+  return Stmt(kind: IFSTMT, ifStmt: (condition, thenBranch, elseBranch))
+  
+proc forStatement(self: var Parser): Stmt=
+  discard self.consume(LEFT_PAREN, "Expect '(' after 'for'.")
+  var initializer = DefaultStmt
+
+  if self.match(SEMICOLON): initializer = DefaultStmt
+  elif self.match(VAR): initializer = self.varDeclaration()
+  else: initializer = self.expressionStatement()
+
+  var condition = DefaultExpr
+  if not self.check(SEMICOLON): condition = self.parseExpression()
+  discard self.consume(SEMICOLON, "Expect ';' after loop condition.")
+
+  var increment = DefaultExpr
+  if not self.check(RIGHT_PAREN): increment = self.parseExpression()
+  discard self.consume(RIGHT_PAREN, "Expect ')' after for clauses")
+
+  var body = self.parseStatement()
+  if increment != DefaultExpr:
+    body = Stmt(kind: BLOCKSTMT, statements: @[body, Stmt(kind: EXPRSTMT, exprStmt: increment)])
+
+  if condition.kind == NILEXPR: condition = Expr(kind: LITERALEXPR, literalVal: Literal(kind: BOOLEAN_LIT, boolVal: true))
+  body = Stmt(kind: WHILESTMT, whileStmt: (condition, body))
+
+  if initializer.stmtIsNull:
+    body = Stmt(kind: BLOCKSTMT, statements: @[initializer, body])
+
+  return body
 
 proc printStatement(self: var Parser): Stmt=
   let value = self.parseExpression()
@@ -104,12 +171,28 @@ proc comma(self: var Parser): Expr=
   return expr
 
 proc ternary(self: var Parser): Expr=
-  var expr = self.equality()
+  var expr = self.orExpr()
   if self.match(QUESTION):
     let first = self.ternary()
     if self.match(COLON):
       let second = self.ternary()
       expr = Expr(kind: TERNARYEXPR, ternaryVal: (expr, first, second, self.previous()))
+  return expr
+
+proc orExpr(self: var Parser): Expr=
+  var expr = self.andExpr()
+  while self.match(OR):
+    let operator = self.previous()
+    let right = self.andExpr()
+    expr = Expr(kind: LOGICALEXPR, logicalVal: (expr, operator, right))
+  return expr
+ 
+proc andExpr(self: var Parser): Expr=
+  var expr = self.equality()
+  while self.match(AND):
+    let  operator = self.previous()
+    let right = self.equality()
+    expr = Expr(kind: LOGICALEXPR, logicalVal: (expr, operator, right))
   return expr
 
 proc parseExpression(self: var Parser): Expr=

@@ -1,35 +1,27 @@
 import tables
 import errors
-import token
 import options
-
-type EnvTable = Table[string, Literal]
-
-type
-  Environment* = ref object
-    values: EnvTable
-    enclosing: Option[Environment]
+import common_types
 
 proc newEnv*(): Environment=
-  return Environment(
-    values: initTable[string, Literal](), enclosing: none(Environment)
-  )
+  return Environment(values: defaultEnvValues, enclosing: none(Environment))
+
 proc newEnv*(enclosing: Environment): Environment=
-  return Environment(
-    values: initTable[string, Literal](),
-    enclosing: some(enclosing)
-  )
+  return Environment(values: defaultEnvValues, enclosing: some(enclosing))
 
 proc get*(self: Environment, name: Token): Literal
   {.raises: [IOError, RunTimeError, KeyError, UnpackError]}=
-  if self.values.hasKey(name.lexeme): return self.values[name.lexeme]
-  if self.enclosing.isSome: return self.enclosing.get().get(name)
+  if self.values.hasKey(name.lexeme):
+    return self.values[name.lexeme]
+  if self.enclosing.isSome:
+    let lit = self.enclosing.get().get(name)
+    return lit
   runtimeError("Undefined variable ", name)
 
 proc define*(self: var Environment, name: string, value: Literal)=
   self.values[name] = value
 
-proc assign*(self: Environment, name: Token, value: Literal)=
+proc assign*(self: var Environment, name: Token, value: Literal)=
   if self.values.hasKey(name.lexeme):
     self.values[name.lexeme] = value
   else:

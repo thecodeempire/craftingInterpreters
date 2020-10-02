@@ -26,3 +26,39 @@ print d == 0.5 ? a : b;
 print a;
 print b;
 print c;
+
+// For loops
+var a1 = 0;
+var b1 = 1;
+while (a1 < 100) {
+  print a1;
+  var temp = a1;
+  a1 = a1 + b1;
+}
+
+print "--------------- FIBONACCI";
+
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+
+for (var i = 0; i < 20; i = i + 1) {
+  print fib(i);
+}
+
+print "------------- CLOSURES";
+
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+  return count;
+}
+var counter = makeCounter();
+counter();
+counter();
+
+print "------------"

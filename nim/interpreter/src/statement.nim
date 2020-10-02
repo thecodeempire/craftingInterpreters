@@ -1,24 +1,34 @@
 import token
+import strformat
 import expression
+import common_types
 
-type
-  StmtKind* = enum
-    BLOCKSTMT, EXPRSTMT, PRINTSTMT, VARSTMT
-  Stmt* = ref object
-    case kind*: StmtKind
-    of BLOCKSTMT: statements*: seq[Stmt]
-    of EXPRSTMT: exprStmt*: Expr
-    of PRINTSTMT: printStmt*: Expr
-    of VARSTMT: varStmt*: tuple[name: Token, value: Expr]
+proc `$`*(stmt: Stmt): string
+
+proc `$`*(stmts: seq[Stmt]): string=
+  for i, statement in stmts: result &= $statement
 
 proc `$`*(stmt: Stmt): string=
   case stmt.kind:
   of BLOCKSTMT:
-    for i, statement in stmt.statements: return $statement
-  of EXPRSTMT: return $stmt.exprStmt
-  of PRINTSTMT: return "print->" & $stmt.printStmt
-  of VARSTMT: return "(" & $stmt.varStmt.name & ", " & $stmt.varStmt.value & ")"
+    return fmt"""
+    (BLOCKSTMT: {$stmt.statements})"""
+  of EXPRSTMT: return fmt"""
+    (EXPRSTMT: {$stmt.exprStmt})"""
+  of PRINTSTMT: return fmt"""
+    (PRINTSTMT: {$stmt.printStmt})"""
+  of VARSTMT: return fmt"""
+    (VARSTMT: {$stmt.varStmt})"""
+  of IFSTMT: return fmt"""
+    (IFSTMT: {$stmt.ifStmt.condition}, {$stmt.ifStmt.thenBranch}, {$stmt.ifStmt.elseBranch})"""
+  of WHILESTMT: return fmt"""
+    (WHILESTMT: {$stmt.whileStmt.condition}, {$stmt.whileStmt.body})"""
+  of FUNCSTMT: return fmt"""
+    (FUNCSTMT: {$stmt.funcStmt.name}, {$stmt.funcStmt.params}, ${stmt.funcStmt.body})"""
+  of RETURNSTMT: return fmt"""
+    (RETURNSTMT: {$stmt.returnStmt.keyword}, {stmt.returnStmt.value})"""
 
-proc printStmts*(stmts: seq[Stmt])=
-  for i, stmt in stmts:
-    echo $stmt
+proc stmtIsNull*(self: Stmt): bool=
+  return self.kind == BLOCKSTMT and self.statements.len() == 0
+
+proc printStmts*(stmts: seq[Stmt])= echo $stmts
